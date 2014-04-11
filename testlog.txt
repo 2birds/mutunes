@@ -1,0 +1,17 @@
+0.32361624870618
+0.10783799567903
+0.21458119882268
+0.31810626145187
+-3
+INSERT INTO `battles` (`winnerId`, `loserId`, `musician`) VALUES (106, 105, );
+UPDATE `melodies` SET `wins` = `wins` + 1, `totalWins` = `totalWins` + 1 WHERE `id` = 106AND `wins` is not null AND `totalWins` is not null;
+UPDATE `melodies` SET `defeats` = `defeats` + 1, `totalDefeats` = `totalDefeats` + 1 WHERE `id` = 105AND `defeats` is not null AND `totalDefeats` is not null;
+3
+INSERT INTO `battles` (`winnerId`, `loserId`, `musician`) VALUES (112, 106, );
+UPDATE `melodies` SET `wins` = `wins` + 1, `totalWins` = `totalWins` + 1 WHERE `id` = 112AND `wins` is not null AND `totalWins` is not null;
+UPDATE `melodies` SET `defeats` = `defeats` + 1, `totalDefeats` = `totalDefeats` + 1 WHERE `id` = 106AND `defeats` is not null AND `totalDefeats` is not null;
+3
+INSERT INTO `battles` (`winnerId`, `loserId`, `musician`) VALUES (104, 108, );
+UPDATE `melodies` SET `wins` = `wins` + 1, `totalWins` = `totalWins` + 1 WHERE `id` = 104AND `wins` is not null AND `totalWins` is not null;
+UPDATE `melodies` SET `defeats` = `defeats` + 1, `totalDefeats` = `totalDefeats` + 1 WHERE `id` = 108AND `defeats` is not null AND `totalDefeats` is not null;
+3

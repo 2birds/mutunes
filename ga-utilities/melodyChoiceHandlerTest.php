@@ -1,0 +1,185 @@
+<?php
+session_name('contributorCheck');
+session_start();
+/* POST/REDIRECT/GET
+ * Prevents the re-sent post-data problem.
+ */
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/ga-utilities/GenerationFunctions.php");
+
+$result = query('SELECT COUNT(id) FROM `melodies`;');
+$row = mysqli_fetch_array($result);
+//echo($row);
+
+// Business logic.
+if(isset($_POST['choice']) && $_POST['choice'] != '') {
+  $_SESSION['isContributor'] = true;
+
+  // If user has contributed previously..
+  if(isset($_COOKIE['email'])) {
+    $q = "UPDATE contributors ".
+      "SET contributions = contributions + 1 ".
+      "WHERE `email` = '".$_COOKIE['email']."';";
+    query($q);
+  }else{ // New user
+    // Record number of contributions before they register.
+    if(isset($_SESSION['contributions'])) {
+      $_SESSION['contributions'] += 1;
+    }else{
+      $_SESSION['contributions'] = 1;
+    }
+  }
+    
+  $battleResults = explode("-",$_POST['choice']);
+
+  if(isset($_POST['musician'])){
+    $musician = $_POST['musician'];
+  }else{
+    $musician = false;
+  }
+
+  query("START TRANSACTION"); // DB Lock
+  $q = "INSERT INTO `battles` (`winnerId`, `loserId`, `musician`) ".
+    "VALUES ($battleResults[0], $battleResults[1], $musician);";
+  exec("echo '$q' >> testlog.txt");
+  query($q);
+  $q = "UPDATE `melodies` ".
+    "SET `wins` = `wins` + 1, ".
+    "`totalWins` = `totalWins` + 1 ".
+    "WHERE `id` = '$battleResults[0]'".
+    "AND `wins` is not null ".
+    "AND `totalWins` is not null;";
+  query($q);
+  exec("echo '$q' >> testlog.txt");
+  $q = "UPDATE `melodies` ".
+    "SET `defeats` = `defeats` + 1, ".
+    "`totalDefeats` = `totalDefeats` + 1 ".
+    "WHERE `id` = '$battleResults[1]'".
+    "AND `defeats` is not null ".
+    "AND `totalDefeats` is not null;";
+  query($q);
+  exec("echo '$q' >> testlog.txt");
+  query("COMMIT");
+
+  // This is now redundant. I think.
+  /*
+  echo("<script type='text/javascript'>\n".
+       "var winner = ".$battleResults[0].";\n".
+       "alert('Melody ' + winner + ' won!');".
+       "</script>\n");
+   */
+
+  checkGenerationThreshold();
+
+  // redirect back to compare.php
+  header("Location: ../test.php");
+  exit();
+}
+
+function checkGenerationThreshold() {
+  $q = "SELECT threshold FROM generalProperties WHERE name='properties';";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  $thresh = $row[0];
+
+  exec("echo '$thresh' >> testlog.txt");
+
+  $q = "SELECT max(wins - defeats) FROM melodies WHERE inPopulation = 1;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  $max = $row[0];
+  
+  $q = "SELECT min(wins - defeats) FROM melodies WHERE inPopulation = 1;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  $min = $row[0];
+
+  if($max - $min > $thresh) {
+    nextGeneration();
+  }
+}
+
+function nextGeneration(){
+  echo("<h0>Making next generation..</h1>");
+  // Get highest ranking
+  $q = "SELECT id, melodyString FROM melodies ORDER BY (wins - defeats) DESC LIMIT 2;";
+  $res = query($q);
+  $parentId = array();
+  $mels = array();
+
+  while($row = mysqli_fetch_array($res)) {
+    $parentId[] = $row['id'];
+    $mels[] = $row['melodyString'];
+  }
+  /*echo("<p>$parentId[0], $parentId[1]</p>");
+    echo("<p>$mels[0], $mels[1]</p>");*/
+
+  // Reset scores for parent melodies.
+  $q = "UPDATE melodies ".
+    "SET wins=0, defeats=0 ".
+    "WHERE id IN (".$parentId[0].",".$parentId[1].");";
+
+  query($q);
+
+  $mels[0] = Melody::melodyStringToArray($mels[0]);
+  $mels[1] = Melody::melodyStringToArray($mels[1]);
+
+  $offspring = GeneticFunctions::crossoverWithDuration($mels[0], $mels[1]);
+
+  foreach($offspring[0] as $o) {
+    echo($o."\n");
+  }
+  
+  $mutatee = rand(0,1);
+  $offspring[$mutatee] = GeneticFunctions::mutateWithDuration($offspring[$mutatee]);
+
+  $mel1 = new Melody();
+  $mel2 = new Melody();
+
+  $mel1->setMelody($offspring[0]);
+  $mel2->setMelody($offspring[1]);
+
+  // Get info about melodies to be replaced.
+  $q = "SELECT id, position FROM melodies WHERE inPopulation=1 ORDER BY (wins - defeats) LIMIT 2;";
+  $res = query($q);
+  $what = array();
+  $where = array();
+
+  while($row = mysqli_fetch_row($res)) {
+    echo($row[0].", ".$row[1]."\n");
+    $what[] = $row[0];
+    $where[] = $row[1];
+  }
+  /*echo("<p>$what[0], $what[1]</p>");
+    echo("<p>$where[0], $where[1]</p>");*/
+
+  // The order of the parent listing corresponds to the half
+  // received, ie., $parent[0] is 1st half, etc.
+  //echo($what[0].", ".$what[1]);
+  $mel1->setParents($parentId[0],$parentId[1]);
+  $mel2->setParents($parentId[1],$parentId[0]);
+
+  $mel1->setPosition($where[0]);
+  $mel2->setPosition($where[1]);
+
+  // Remove old dead melodies from population.
+  $q = "UPDATE melodies ".
+    "SET inPopulation = 0 ".
+    "WHERE inPopulation=1 ".
+    "AND id IN (".$what[0].",".$what[1].");";
+  query($q);
+
+  $q = "SELECT max(id), max(introducedAtGeneration) ".
+    "FROM melodies;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+
+  $mel1->setId($row[0] + 1);
+  $mel2->setId($row[0] + 2);
+
+  $mel1->setGeneration($row[1] + 1);
+  $mel2->setGeneration($row[1] + 1);
+
+  $mel1->writeToDB();
+  $mel2->writeToDB();
+}
+?>

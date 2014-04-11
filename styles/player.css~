@@ -1,0 +1,19 @@
+.player {
+  float:center;
+//  margin:0% 28%;
+}
+
+.player audio {
+  float:left;
+}
+
+.sub-player{
+  padding:8px;
+  text-align:left;
+}
+
+
+
+.player span{
+  font-style:italic;
+}

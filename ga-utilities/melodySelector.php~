@@ -1,0 +1,208 @@
+<?php
+//require($_SERVER["DOCUMENT_ROOT"].'php_utils/db_query.php');
+//require($_SERVER["DOCUMENT_ROOT"]."/mutunes/ga-utilities/MelodyGenerator.class.php");
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/ga-utilities/MelodyGeneratorWithDuration.class.php");
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/ga-utilities/Melody.class.php");
+//require($_SERVER["DOCUMENT_ROOT"]."/mutunes/ga-utilities/GeneticFunctions.class.php");
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/ga-utilities/GeneticFunctionsWithDuration.class.php");
+
+$result = query('SELECT COUNT(id) FROM melodies;');
+$row = mysqli_fetch_array($result);
+//echo($row);
+
+// Check for existing population, ie., is this the first time?
+if($row[0] == 0) {
+  echo("Generating new population..\n");
+  generateInitialPopulation();
+}else{
+
+  // Get next melody, random competitor
+  query("START TRANSACTION"); // Allows effective lock, prevents race conditions on concurrent access.
+  $q = "SELECT currentPosition, popsize FROM generalProperties;";
+  $res = query($q);
+  $q = "UPDATE generalProperties SET currentPosition = currentPosition + 1 WHERE name = 'properties';";
+  query($q);
+  query("COMMIT");
+  $row = mysqli_fetch_array($res);
+  
+  /* Current melody is also a measure of the number of operations
+   * and so needs a mod operator to get the actual position
+   * in the population.
+   */
+  if($row[0] % $row[1] == 0) {
+    $m1 = $row[1];
+  }else{
+    $m1 = $row[0] % $row[1];
+  }
+  $m2 = rand(1,$row[1]);
+  while($m1 == $m2) { //  Different random number.
+    $m2 = rand(1,$row[1]);
+  }
+
+  // Get ids of these two random melodies.
+  //$mels = array($m1, $m2);
+  $q = "SELECT id FROM melodies WHERE inPopulation=1 AND position IN ($m1,$m2) LIMIT 0,2;";
+  //echo($q);
+  $res = query($q);
+  //echo(gettype($res)."\n");
+  $melIDs = array();
+  while($fn = mysqli_fetch_array($res)) {
+    // These are passed to "compare.php" to load the appropriate melodies. 
+    $melIDs[] = $fn[0];
+    // If the sound file doesn't exist, make it exists!
+    if(!file_exists("music/".$fn[0].".wav")) {
+      $q = "SELECT melodyString FROM melodies WHERE id=$fn[0];";
+      //echo($q."\n");
+      // Replace $res with $m here as I was overwriting something I needed
+      $m = query($q) or die();
+      $melString = mysqli_fetch_row($m);
+      //echo($melString);
+      $melString = $melString[0];
+      //echo($melString."\n");
+      $melString =
+      Melody::melodyStringToArray($melString);
+      //echo($melString."\n");
+      $mg = new MelodyGenerator(true);
+      $mg->writeMelody($mg->getNotes($melString),"".$fn[0]);
+    } 
+  } 
+}
+
+function generateInitialPopulation(){
+  $q = "SELECT popsize FROM generalProperties;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  
+  $mg = new MelodyGenerator(true);
+  for($i = 0; $i < $row[0]; $i++) {
+    $mel = new Melody();
+    $mel->setId($i+1);
+    $mel->setPosition($i+1);
+    $newMelody = $mg -> generateRandomMelody();
+    echo($newMelody);
+    $mel->setMelody($mg->generateRandomMelody());
+    
+    //MelodyGenerator::writeMelody(MelodyGenerator::getNotes($mel->getMelody()),"$mel->getId()");
+    $mel->setGeneration(0);
+    $mel->inPopulation(true);
+    // Other values are set by default.
+    $mel->writeToDB();
+    
+  }
+}
+
+/*
+function checkGenerationThreshold() {
+  $q = "SELECT threshold FROM generalProperties WHERE name='properties';";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  $thresh = $row[0];
+
+  $q = "SELECT max(wins - defeats) FROM melodies;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  $max = $row[0];
+  
+  $q = "SELECT min(wins - defeats) FROM melodies;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+  $min = $row[0];
+
+  if($max - $min > $thresh) {
+    nextGeneration();
+  }
+}
+*/
+
+/*
+function nextGeneration(){
+  echo("<h0>Making next generation..</h1>");
+  // Get highest ranking
+  $q = "SELECT id, melodyString FROM melodies ORDER BY (wins - defeats) DESC LIMIT 2;";
+  $res = query($q);
+  $parentId = array();
+  $mels = array();
+
+  while($row = mysqli_fetch_array($res)) {
+    $parentId[] = $row['id'];
+    $mels[] = $row['melodyString'];
+  }
+  //echo("<p>$parentId[0], $parentId[1]</p>");
+  //echo("<p>$mels[0], $mels[1]</p>");
+
+  // Reset scores for parent melodies.
+  $q = "UPDATE melodies ".
+    "SET wins=0, defeats=0 ".
+    "WHERE id IN (".$parentId[0].",".$parentId[1].");";
+
+  query($q);
+
+  $mels[0] = Melody::melodyStringToArray($mels[0]);
+  $mels[1] = Melody::melodyStringToArray($mels[1]);
+
+  $offspring = GeneticFunctions::crossover($mels[0], $mels[1]);
+  $mutatee = rand(0,1);
+  $offspring[$mutatee] = GeneticFunctions::mutate($offspring[$mutatee]);
+
+  $mel1 = new Melody();
+  $mel2 = new Melody();
+
+  $mel1->setMelody($offspring[0]);
+  $mel2->setMelody($offspring[1]);
+
+  // Get info about melodies to be replaced.
+  $q = "SELECT id, position FROM melodies ORDER BY (wins - defeats) LIMIT 2;";
+  $res = query($q);
+  $what = array();
+  $where = array();
+
+  while($row = mysqli_fetch_row($res)) {
+    echo($row[0].", ".$row[1]."\n");
+    $what[] = $row[0];
+    $where[] = $row[1];
+  }
+  //echo("<p>$what[0], $what[1]</p>");
+  //echo("<p>$where[0], $where[1]</p>");
+
+  // The order of the parent listing corresponds to the half
+  // received, ie., $parent[0] is 1st half, etc.
+  //echo($what[0].", ".$what[1]);
+  $mel1->setParents($what[0],$what[1]);
+  $mel2->setParents($what[1],$what[0]);
+
+  $mel1->setPosition($where[0]);
+  $mel2->setPosition($where[1]);
+
+  // Remove old dead melodies from population.
+  $q = "UPDATE melodies ".
+    "SET inPopulation=0 ".
+    "WHERE id IN (".$what[0].",".$what[1].");";
+  query($q);
+
+  $q = "SELECT max(id), max(introducedAtGeneration) ".
+    "FROM melodies;";
+  $res = query($q);
+  $row = mysqli_fetch_array($res);
+
+  $mel1->setId($row[0] + 1);
+  $mel2->setId($row[0] + 2);
+
+  $mel1->setGeneration($row[1] + 1);
+  $mel2->setGeneration($row[1] + 1);
+
+  $mel1->writeToDB();
+  $mel2->writeToDB();
+  
+}
+*/
+
+function makePlayer($mel,$against) {
+  echo("<h4>Melody ".$mel."</h4>".
+       "<audio controls>\n".
+       "<source src='music/".$mel.".mp3' type='audio/mp3' />\n".
+       "<source src='music/".$mel.".wav' type='audio/wav' />\n".
+       "</audio>".
+       "<input type='radio' name='choice' value='".$mel."-".$against."' />");
+}
+
+?>

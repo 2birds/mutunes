@@ -1,0 +1,5 @@
+.new{
+    color:red;
+    background-color:red;
+    font-style:italic;
+}

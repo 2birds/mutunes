@@ -1,0 +1,50 @@
+.player {
+  float:center;
+//  margin:0% 28%;
+//  background-image:url('http://1.bp.blogspot.com/_YK9B_E78YBo/S_qF2KtIPOI/AAAAAAAABzE/yfb3MI-FoQE/s1600/nastbox1.jpg');
+background-color:#ddd;
+  border:1px dashed black;
+}
+
+.player audio {
+  float:left;
+}
+
+.sub-player{
+  //border:1px dashed black;
+  padding:8px;
+  text-align:left;
+}
+
+.player span{
+    font-style:italic;
+}
+
+.speedControls {
+    background-color:#aaa;
+    display:block;
+    width:relative;
+    //position:relative;
+    height:auto;
+    min-height:50px;
+    //overflow:scroll;
+    position:relative;
+}
+
+.speedControls div, .speedControls span {
+    position:relative;
+    margin:auto;
+    float:left;
+    vertical-align:middle;
+    text-align:center;
+}
+
+#speedValue{
+    font-size:2em;
+    line-height:normal;
+    text-align:center;
+    background-color:#ddd;
+    //display: inline-block;
+    vertical-align: middle;
+    margin:3px;
+}

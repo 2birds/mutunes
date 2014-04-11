@@ -1,0 +1,9 @@
+<?php
+function query($q) {
+  $conn = mysqli_connect('localhost','root','P1psqueak');
+  mysqli_select_db('mutunes',$conn);
+  $result = mysqli_query($q,$conn) or die(mysqli_error());
+  mysqli_close($conn);
+  return $result;
+}
+?>

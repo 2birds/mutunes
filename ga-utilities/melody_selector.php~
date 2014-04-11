@@ -1,0 +1,30 @@
+<?php
+//require('php_utils/db_query.php');
+require('ga-utilities/write_to_midi.php');
+require('ga-utilities/melody.class.php');
+
+$result = query('SELECT COUNT(id) FROM melodies;');
+$row = mysql_get_row($result);
+
+if($row[0] == 0) {
+  generate_initial_population();
+}
+
+function generate_initial_population(){
+  for($i = 0; $i < 50; $i++) {
+    $mel = Melody();
+    $mel->setId($i+1);
+    $mel->setMelody(MelodyGenerator::get_random_melody());
+    $mel->setGeneration(MelodyGenerator::get_random_melody());
+    $mel->inPopulation(true);
+    // Other values are set by default.
+    $mel->writeToDB();
+    
+  }
+}
+
+function get_melody_pair() {
+  echo("I don't do anything yet.\n");
+}
+
+?>

@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W1C//DTD XHTML 1.0 Strict//EN
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>MuTunes</title>
+<meta http-equiv="content-type" 
+content="text/html;charset=utf-8" />
+<?php require("components/cssHeaders.php"); ?>
+<?php require("ga-utilities/melodySelector.php"); ?>
+<?php require("components/javascriptHeaders.php"); ?>
+</head>
+
+<body>
+<div class="main_container">
+<?php
+require("components/title.php");
+require("components/menu.php");
+?>
+
+<p>Here is your chance to contribute!</p>
+<p>Listen to the two melodies, and select which one you think is more musical.<br />
+If you think they're both horrible, select the one you think is least awful.<br />
+This is your contribution, and it will, in a small way, sway the evolution of this piece.<br />
+If you feel like making more than one comparison, be my guest! You'll be doing me a huge favour,
+thanks for helping out!</P>
+
+<div class="player">
+<form name="comparison" action="" method="post" onsubmit="thanks()" >
+<div class="sub-player">
+<?php 
+  makePlayer($melIDs[0],$melIDs[1]);
+?>
+<span class="choice_label">I like this one..</span>
+</div>
+<div class="sub-player">
+<?php 
+  makePlayer($melIDs[1],$melIDs[0]);
+?>
+<span class="choice_label">No, actually I prefer this one!</span>
+</div>
+<br />
+<input type="radio" name="musician" value="yes" />
+<span class="choice_label">I am a musician.</span>
+<input type="radio" name="musician" value="no" />
+<span class="choice_label">I am <u>not</u> a musician.</span>
+<input type="submit" value="submit" />
+</form>
+</div>
+
+<?php require("components/footer.php"); ?>
+</div>
+</body>
+</html>

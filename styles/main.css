@@ -1,0 +1,74 @@
+@import url(http://fonts.googleapis.com/css?family=Gafata&subset=latin,latin-ext);
+
+body {
+    margin:20px 20%;
+    background-color:#34d;
+
+    font-family:'Gafata', sans-serif;
+    font-size:14pt;
+    //text-align:center;
+    text-align:justify;
+}
+
+.main_container{
+    padding:0% 21%;
+    background-color:#fff;
+    border:2px solid black;
+    border-radius:10px;
+    box-shadow:-10px 10px 3px #12a;
+
+}
+
+#title {
+    font-size:1.5em;
+    text-decoration:underline;
+    text-align:center;
+}
+
+#title h4{
+    font-style:italic;
+    text-decoration:none;
+}
+
+table td, table th {
+    border:1px solid black;
+    color:white;
+    font-style:bold;
+    background-color:black;
+}
+
+.error{
+    background-color:#b43;
+    color:#eee;
+}
+
+.error a{
+    color:#eee;
+    font-weight:bold;
+}
+
+
+@media all and (orientation:portrait) {
+    body{
+	margin:20px 2%;
+	font-size:22pt;
+    }
+
+    .main_container{
+	padding:0% 10%;
+    }
+
+    #title #unilogo{
+	max-width:25%;
+    }
+}
+
+@media all and (orientation:landscape) {
+    #title img{
+	max-width:70%;
+    }
+
+    #title #unilogo{
+	max-width:25%;
+    }
+}

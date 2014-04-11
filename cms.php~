@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+        <html xmlns="http://www.w3.org/1999/xhtml">
+
+          <head>
+              <title>MuTunes</title>
+                <meta http-equiv="content-type" 
+                    content="text/html;charset=utf-8" />
+<?php 
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/components/cssHeaders.php"); 
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/php_utils/db_query.php");
+
+$q = "SELECT * FROM melodies WHERE inPopulation=1 ORDER BY ((wins - defeats) + (wins / 10)) DESC;";
+$result = query($q);
+
+if(isset($_POST['threshold']) && $_POST['threshold'] != '' && $_POST['popsize'] != '' && isset($_POST['popsize'])) {
+    $q = "UPDATE generalProperties ".
+      "SET popsize=".$_POST['popsize'].", ".
+      "threshold=".$_POST['threshold']." ".
+      "WHERE name='properties';";
+    query($q);
+}
+
+if(isset($_POST['reset']) && $_POST['reset'] == 'reset') {
+  resetSystem();
+}
+
+function resetSystem(){
+  query("START TRANSACTION;");
+  $q = "UPDATE melodies SET wins = 0, defeats = 0, totalWins = 0, totalDefeats = 0 WHERE inPopulation = 1;";
+  query($q);
+  $q = "TRUNCATE TABLE battles;";
+  query($q);
+  $q = "TRUNCATE TABLE melodies;";
+  query($q);
+  $q = "UPDATE generalProperties SET currentPosition=1 WHERE name='properties';";
+  query($q);
+  query("COMMIT;");
+  exec("rm music/*.wav music/*.mp3 music/*.mid"); 
+}
+?>
+                  </head>
+
+                  <body>
+<div class="main_container">
+<?php
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/components/title.php");
+require($_SERVER["DOCUMENT_ROOT"]."/mutunes/components/menu.php");
+?>
+                       
+<form name='controls' action='' method='post'>
+  Threshold for crossover:<input type='text' name='threshold' /><br />
+  Popsize:<input type='text' name='popsize' /><br />
+  Reset:<input type='checkbox' name='reset' value='reset' /><br />
+  <input type='submit' value='Submit!' />
+</form>
+
+			 <table>
+			 <tr><th>id</th>
+			 <th>Score</th>
+			 <th>Wins</th>
+			 <th>defeats</th>
+			 <th>Total Wins</th>
+			 <th>Total Defeats</th></tr>
+			 <?php
+			 while($row = mysqli_fetch_array($result)) {
+			   echo("<tr>".
+				"<td>");
+
+			   if($row['totalWins'] + $row['totalDefeats'] == 0){
+			     echo("<span class='new'>New!</span>");
+			   }
+
+			   echo($row['id']."</td>".
+				"<td>".($row['wins'] - $row['defeats'])."</td>".
+				"<td>".$row['wins']."</td>".
+				"<td>".$row['defeats']."</td>".
+				"<td>".$row['totalWins']."</td>".
+				"<td>".$row['totalDefeats']."</td>".
+				"</tr>");
+			 }
+?>
+</table>
+
+<?php require($_SERVER["DOCUMENT_ROOT"]."/mutunes/components/footer.php"); ?>
+</p>
+</div>
+                       </body>
+                     </html>
